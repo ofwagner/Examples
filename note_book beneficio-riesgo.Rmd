@@ -1,0 +1,72 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+
+```{r}
+x <- runif(200, 0, 100)
+x2 <- runif(200, 0, 300)
+
+y <- 5*x + 2*x2^2 + 5*x2^3 +rnorm(200, 0, 30)
+df <- data.frame(x,x2, y)
+df
+plot(df)
+
+linearMod <- lm(y ~ x+x2, data=df)
+
+summary(linearMod)
+
+#inicializo
+beneficio <- integer()
+riesgo <- integer()
+prop  <- integer()
+# prop_X=0
+# prop_X2=0
+inx=1
+
+#data inicial a predecir, para ejemplo últimos 12 puntos (podría ser el último año)
+df2=df[(nrow(df)-11):nrow(df),c("x","x2")]
+
+#loop para hacer todos los posibles escenarios
+for (p in seq (0,1, 0.05)) {
+  
+  prop[inx]=p
+
+#prop_X2 = prop_X2 + .5
+
+  df2$x =df$x[(nrow(df)-11):nrow(df)]*(p)
+  df2$x2 =df$x2[(nrow(df)-11):nrow(df)]*(1-p)
+
+  prediccion <- predict(linearMod, df2,se.fit = TRUE)
+  
+  beneficio[inx] <- sum(prediccion$fit)
+  riesgo[inx] <- sum(prediccion$se.fit^2)^(1/2) 
+ 
+  inx = inx + 1
+  }
+
+
+#preparamos los datos para dibujar
+ben_ries <- data.frame(riesgo, beneficio)
+
+
+
+#calculamos la envolvente convexa (parte superior)
+
+#min(ben_ries$riesgo)
+
+env_con_minimo <- min(ben_ries$beneficio[ben_ries$riesgo==min(ben_ries$riesgo)])
+
+hpts <- chull(ben_ries)
+hpts <- c(hpts, hpts[1])
+envolvente_convexa <- ben_ries[hpts, ][ben_ries[hpts, 2]>=env_con_minimo,]
+
+#dibujamos
+plot(ben_ries)
+text(riesgo, beneficio, labels=prop, cex= 0.7, pos=3)
+lines(envolvente_convexa, col="Red", lty=4,  pch=15)
+```
